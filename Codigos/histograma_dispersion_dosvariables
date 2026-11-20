@@ -1,0 +1,403 @@
+# DISTRIBUCION CONJUNTA Y DISTRIBUCIONES MARGINALES
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from pathlib import Path
+from matplotlib.gridspec import GridSpec
+
+carpeta = Path(__file__).parent
+
+archivos_excel = list(carpeta.glob("*.xlsx"))
+
+print("=" * 65)
+print("BUSCANDO ARCHIVO DE EXCEL")
+print("=" * 65)
+
+if len(archivos_excel) == 0:
+
+    print("No se encontro ningun archivo Excel.")
+    print("Coloca el archivo .xlsx en:")
+    print(carpeta)
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+archivo = archivos_excel[0]
+
+print("\nArchivo seleccionado:")
+print(archivo.name)
+
+
+df = pd.read_excel(archivo)
+
+print("\nColumnas de la base de datos:")
+print(df.columns.tolist())
+
+X = pd.to_numeric(
+    df["Distancia_pc"],
+    errors="coerce"
+)
+
+Y = pd.to_numeric(
+    df["Magnitud_V"],
+    errors="coerce"
+)
+
+
+datos = pd.DataFrame({
+
+    "Distancia_pc": X,
+    "Magnitud_V": Y
+
+})
+
+datos = datos.replace(
+    [np.inf, -np.inf],
+    np.nan
+)
+
+datos = datos.dropna()
+
+X = datos["Distancia_pc"].to_numpy()
+Y = datos["Magnitud_V"].to_numpy()
+
+n = len(datos)
+
+if n < 2:
+    raise ValueError(
+        "Se necesitan al menos dos observaciones validas."
+    )
+
+
+# CALCULO DE LAS MEDIAS
+#
+# mu = sumatoria(x_i) / n
+
+media_X = np.sum(X) / n
+
+media_Y = np.sum(Y) / n
+
+
+# CALCULO DE LAS MEDIANAS
+
+mediana_X = np.median(X)
+
+mediana_Y = np.median(Y)
+
+
+# 8. CALCULO DE LAS VARIANZAS MUESTRALES
+#
+# s^2 = sumatoria[(x_i - media)^2] / (n-1)
+
+
+varianza_X = np.sum(
+    (X - media_X)**2
+) / (n - 1)
+
+varianza_Y = np.sum(
+    (Y - media_Y)**2
+) / (n - 1)
+
+
+
+# 9. CALCULO DE LAS DESVIACIONES ESTANDAR
+#
+# s = raiz cuadrada de la varianza
+
+
+desv_X = np.sqrt(varianza_X)
+
+desv_Y = np.sqrt(varianza_Y)
+
+
+
+# 10. CALCULO DE LA COVARIANZA
+#
+# Cov(X,Y) =
+# sumatoria[(x_i-media_X)(y_i-media_Y)] / (n-1)
+
+
+covarianza = np.sum(
+    (X - media_X) * (Y - media_Y)
+) / (n - 1)
+
+
+
+# 11. CALCULO DE LA CORRELACION DE PEARSON
+#
+# r = Cov(X,Y) / (s_X * s_Y)
+
+
+if desv_X > 0 and desv_Y > 0:
+
+    correlacion = covarianza / (desv_X * desv_Y)
+
+else:
+
+    correlacion = np.nan
+
+
+
+# COEFICIENTE DE DETERMINACION
+#
+# R^2 = r^2
+
+
+R2 = correlacion**2
+
+
+
+# 13. REGLA DE STURGES
+#
+# k = 1 + 3.322 log10(n)
+
+
+clases_X = int(
+    np.ceil(1 + 3.322 * np.log10(n))
+)
+
+clases_Y = int(
+    np.ceil(1 + 3.322 * np.log10(n))
+)
+
+
+
+# MOSTRAR RESULTADOS ESTADISTICOS
+
+
+print("\n" + "=" * 65)
+print("INFORMACION GENERAL")
+print("=" * 65)
+
+print(f"Numero de observaciones: {n}")
+
+print("\n" + "=" * 65)
+print("ESTADISTICOS DESCRIPTIVOS")
+print("=" * 65)
+
+print("\nDISTANCIA (X)")
+
+print(f"Media:                 {media_X:.4f} pc")
+print(f"Mediana:               {mediana_X:.4f} pc")
+print(f"Varianza:              {varianza_X:.4f} pc^2")
+print(f"Desviacion estandar:   {desv_X:.4f} pc")
+
+print("\nMAGNITUD APARENTE (Y)")
+
+print(f"Media:                 {media_Y:.4f}")
+print(f"Mediana:               {mediana_Y:.4f}")
+print(f"Varianza:              {varianza_Y:.4f}")
+print(f"Desviacion estandar:   {desv_Y:.4f}")
+
+print("\n" + "=" * 65)
+print("DISTRIBUCION CONJUNTA")
+print("=" * 65)
+
+print(f"Covarianza: {covarianza:.6f}")
+
+print(f"Correlacion de Pearson: {correlacion:.6f}")
+
+print(f"Coeficiente R^2: {R2:.6f}")
+
+print("\n" + "=" * 65)
+print("REGLA DE STURGES")
+print("=" * 65)
+
+print(f"Clases para X: {clases_X}")
+print(f"Clases para Y: {clases_Y}")
+
+
+#  INTERPRETACION DE LA CORRELACION
+
+
+if np.isfinite(correlacion):
+
+    if correlacion > 0:
+        direccion = "Positiva"
+
+    elif correlacion < 0:
+        direccion = "Negativa"
+
+    else:
+        direccion = "Nula"
+
+    valor_abs = abs(correlacion)
+
+    if valor_abs < 0.3:
+        fuerza = "Debil"
+
+    elif valor_abs < 0.7:
+        fuerza = "Moderada"
+
+    else:
+        fuerza = "Fuerte"
+
+    print("\nDireccion:", direccion)
+    print("Fuerza aproximada:", fuerza)
+
+
+# 16. CREAR LA ESTRUCTURA DE LA GRAFICA
+
+
+fig = plt.figure(figsize=(12, 9))
+
+gs = GridSpec(
+    2,
+    2,
+    width_ratios=[4, 1.2],
+    height_ratios=[1.2, 4],
+    hspace=0.05,
+    wspace=0.05
+)
+
+ax_superior = fig.add_subplot(gs[0, 0])
+
+ax_central = fig.add_subplot(gs[1, 0])
+
+ax_lateral = fig.add_subplot(gs[1, 1])
+
+
+
+# HISTOGRAMA MARGINAL DE X
+
+
+ax_superior.hist(
+    X,
+    bins=clases_X,
+    color="steelblue",
+    edgecolor="black",
+    alpha=0.8
+)
+
+ax_superior.set_title(
+    "Distribucion marginal de X: Distancia",
+    fontsize=12
+)
+
+ax_superior.set_ylabel(
+    "Frecuencia"
+)
+
+ax_superior.grid(
+    alpha=0.3,
+    axis="y"
+)
+
+ax_superior.tick_params(
+    labelbottom=False
+)
+
+
+# 18. DIAGRAMA DE DISPERSION
+#
+# Representacion de las observaciones conjuntas
+
+
+ax_central.scatter(
+    X,
+    Y,
+    color="steelblue",
+    edgecolor="black",
+    alpha=0.8,
+    label="Observaciones"
+)
+
+ax_central.set_xlabel(
+    "Distancia (pc)",
+    fontsize=12
+)
+
+ax_central.set_ylabel(
+    "Magnitud aparente (V)",
+    fontsize=12
+)
+
+ax_central.set_title(
+    "Distribucion conjunta de X y Y",
+    fontsize=13
+)
+
+ax_central.grid(
+    alpha=0.3
+)
+
+
+
+# 19. HISTOGRAMA MARGINAL DE Y
+
+
+ax_lateral.hist(
+    Y,
+    bins=clases_Y,
+    orientation="horizontal",
+    color="darkorange",
+    edgecolor="black",
+    alpha=0.8
+)
+
+ax_lateral.set_title(
+    "Distribucion marginal de Y",
+    fontsize=11
+)
+
+ax_lateral.set_xlabel(
+    "Frecuencia"
+)
+
+ax_lateral.grid(
+    alpha=0.3,
+    axis="x"
+)
+
+ax_lateral.tick_params(
+    labelleft=False
+)
+
+
+# ============================================================
+# 20. AGREGAR INFORMACION ESTADISTICA
+# ============================================================
+
+informacion = (
+
+    f"n = {n}\n"
+    f"Media X = {media_X:.2f} pc\n"
+    f"Media Y = {media_Y:.3f}\n"
+    f"Covarianza = {covarianza:.3f}\n"
+    f"r = {correlacion:.4f}\n"
+    f"R² = {R2:.4f}"
+
+)
+
+ax_central.text(
+    0.03,
+    0.97,
+    informacion,
+    transform=ax_central.transAxes,
+    verticalalignment="top",
+    bbox=dict(
+        boxstyle="round",
+        facecolor="white",
+        alpha=0.9
+    )
+)
+
+
+# ============================================================
+# 21. TITULO GENERAL
+# ============================================================
+
+fig.suptitle(
+    "Distribucion conjunta y distribuciones marginales",
+    fontsize=15,
+    y=0.98
+)
+
+
+# ============================================================
+# 22. MOSTRAR RESULTADOS
+# ============================================================
+
+plt.show()

@@ -1,0 +1,332 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+
+
+# 1. BUSCAR AUTOMÁTICAMENTE EL ARCHIVO DE EXCEL
+
+
+carpeta = Path(__file__).parent
+
+print("=" * 60)
+print("BUSCANDO ARCHIVO DE EXCEL")
+print("=" * 60)
+
+print(f"Carpeta del programa:")
+print(carpeta)
+
+
+archivos_excel = list(carpeta.glob("*.xlsx"))
+
+
+print("\nArchivos Excel encontrados:")
+
+for archivo in archivos_excel:
+    print(" -", archivo.name)
+
+
+if len(archivos_excel) == 0:
+
+    print("\nNO SE ENCONTRÓ NINGÚN ARCHIVO .xlsx")
+
+    print("\nDebes colocar el archivo de Excel en:")
+    print(carpeta)
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+
+archivo = archivos_excel[0]
+
+print("\nArchivo seleccionado:")
+print(archivo)
+
+
+# 2. LEER EL ARCHIVO
+
+
+df = pd.read_excel(archivo)
+
+
+
+# 3. MOSTRAR LAS COLUMNAS
+
+
+print("\n" + "=" * 60)
+print("COLUMNAS DE LA BASE DE DATOS")
+print("=" * 60)
+
+print(df.columns.tolist())
+
+
+
+# 4. SELECCIONAR Distancia_pc
+
+
+X = pd.to_numeric(
+    df["Distancia_pc"],
+    errors="coerce"
+).dropna()
+
+
+
+# 5. ESTADÍSTICOS BÁSICOS
+
+
+n = len(X)
+
+xmin = X.min()
+xmax = X.max()
+
+R = xmax - xmin
+
+media = X.mean()
+
+mediana = X.median()
+
+desviacion = X.std()
+
+
+print("\n" + "=" * 60)
+print("ESTADÍSTICOS")
+print("=" * 60)
+
+print(f"Número de datos:       {n}")
+print(f"Mínimo:                {xmin:.4f} pc")
+print(f"Máximo:                {xmax:.4f} pc")
+print(f"Rango:                 {R:.4f} pc")
+print(f"Media:                 {media:.4f} pc")
+print(f"Mediana:               {mediana:.4f} pc")
+print(f"Desviación estándar:   {desviacion:.4f} pc")
+
+
+
+# 6. REGLA DE STURGES
+
+
+k_real = 1 + np.log2(n)
+
+k = round(k_real)
+
+
+print("\n" + "=" * 60)
+print("REGLA DE STURGES")
+print("=" * 60)
+
+print("k = 1 + log2(n)")
+
+print(f"k = 1 + log2({n})")
+
+print(f"k = {k_real:.4f}")
+
+print(f"Número de clases = {k}")
+
+
+
+# 7. AMPLITUD
+
+
+A = R / k
+
+
+print("\n" + "=" * 60)
+print("AMPLITUD")
+print("=" * 60)
+
+print("A = R / k")
+
+print(f"A = {R:.4f} / {k}")
+
+print(f"A = {A:.4f} pc")
+
+
+
+# 8. INTERVALOS
+
+
+intervalos = np.linspace(
+    xmin,
+    xmax,
+    k + 1
+)
+
+
+print("\n" + "=" * 60)
+print("INTERVALOS")
+print("=" * 60)
+
+for i in range(k):
+
+    print(
+        f"Clase {i + 1}: "
+        f"{intervalos[i]:.2f} - "
+        f"{intervalos[i + 1]:.2f} pc"
+    )
+
+
+
+# 9. FRECUENCIAS
+
+
+frecuencias, bordes = np.histogram(
+    X,
+    bins=intervalos
+)
+
+frecuencia_relativa = frecuencias / n
+
+frecuencia_acumulada = np.cumsum(
+    frecuencias
+)
+
+marca_clase = (
+    bordes[:-1] + bordes[1:]
+) / 2
+
+
+
+# 10. TABLA DE FRECUENCIAS
+
+
+tabla = pd.DataFrame({
+
+    "Clase":
+        range(1, k + 1),
+
+    "Límite inferior":
+        bordes[:-1],
+
+    "Límite superior":
+        bordes[1:],
+
+    "Marca de clase":
+        marca_clase,
+
+    "Frecuencia":
+        frecuencias,
+
+    "Frecuencia relativa":
+        frecuencia_relativa,
+
+    "Frecuencia acumulada":
+        frecuencia_acumulada
+})
+
+
+print("\n" + "=" * 100)
+print("TABLA DE DISTRIBUCIÓN DE FRECUENCIAS")
+print("=" * 100)
+
+
+tabla_mostrar = tabla.copy()
+
+
+tabla_mostrar[
+    "Límite inferior"
+] = tabla_mostrar[
+    "Límite inferior"
+].round(2)
+
+
+tabla_mostrar[
+    "Límite superior"
+] = tabla_mostrar[
+    "Límite superior"
+].round(2)
+
+
+tabla_mostrar[
+    "Marca de clase"
+] = tabla_mostrar[
+    "Marca de clase"
+].round(2)
+
+
+tabla_mostrar[
+    "Frecuencia relativa"
+] = (
+    tabla_mostrar[
+        "Frecuencia relativa"
+    ] * 100
+).round(2)
+
+
+print(
+    tabla_mostrar.to_string(
+        index=False
+    )
+)
+
+
+
+# 11. COMPROBACIÓN
+
+
+print("\n" + "=" * 60)
+print("COMPROBACIÓN")
+print("=" * 60)
+
+print(
+    "Suma de frecuencias:",
+    frecuencias.sum()
+)
+
+print(
+    "Suma de frecuencias relativas:",
+    frecuencia_relativa.sum() * 100,
+    "%"
+)
+
+
+
+# 12. HISTOGRAMA
+
+
+plt.figure(
+    figsize=(11, 6)
+)
+
+
+plt.hist(
+    X,
+    bins=intervalos,
+    edgecolor="black"
+)
+
+
+plt.xlabel(
+    "Distancia de las estrellas (pc)",
+    fontsize=12
+)
+
+
+plt.ylabel(
+    "Frecuencia",
+    fontsize=12
+)
+
+
+plt.title(
+    "Histograma de la distancia de 100 estrellas",
+    fontsize=14
+)
+
+
+plt.xticks(
+    np.round(intervalos, 0),
+    rotation=45
+)
+
+
+plt.grid(
+    axis="y",
+    alpha=0.3
+)
+
+
+plt.tight_layout()
+
+
+plt.show()

@@ -1,0 +1,291 @@
+# ============================================================
+# PROYECCIÓN DE CADA VARIABLE EN SU EJE CORRESPONDIENTE
+# Histogramas de:
+#   1. Distancia_pc
+#   2. Magnitud_V
+# ============================================================
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+
+# ============================================================
+# 1. BUSCAR EL ARCHIVO DE EXCEL
+# ============================================================
+
+carpeta = Path(__file__).parent
+
+print("=" * 60)
+print("BUSCANDO ARCHIVO DE EXCEL")
+print("=" * 60)
+
+print(f"Carpeta del programa:")
+print(carpeta)
+
+
+archivos_excel = list(carpeta.glob("*.xlsx"))
+
+
+print("\nArchivos Excel encontrados:")
+
+for archivo in archivos_excel:
+    print(" -", archivo.name)
+
+
+if len(archivos_excel) == 0:
+
+    print("\nNO SE ENCONTRÓ NINGÚN ARCHIVO .xlsx")
+
+    print("\nColoca el archivo Excel en:")
+    print(carpeta)
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+
+archivo = archivos_excel[0]
+
+print("\nArchivo seleccionado:")
+print(archivo)
+
+
+# ============================================================
+# 2. LEER LA BASE DE DATOS
+# ============================================================
+
+df = pd.read_excel(archivo)
+
+
+# ============================================================
+# 3. MOSTRAR LAS COLUMNAS
+# ============================================================
+
+print("\n" + "=" * 60)
+print("COLUMNAS DE LA BASE DE DATOS")
+print("=" * 60)
+
+print(df.columns.tolist())
+
+
+# ============================================================
+# 4. SELECCIONAR LAS DOS VARIABLES
+# ============================================================
+
+X = pd.to_numeric(
+    df["Distancia_pc"],
+    errors="coerce"
+)
+
+Y = pd.to_numeric(
+    df["Magnitud_V"],
+    errors="coerce"
+)
+
+
+# ============================================================
+# 5. ELIMINAR DATOS FALTANTES
+# ============================================================
+
+datos = pd.DataFrame({
+    "Distancia_pc": X,
+    "Magnitud_V": Y
+})
+
+datos = datos.dropna()
+
+
+X = datos["Distancia_pc"]
+Y = datos["Magnitud_V"]
+
+
+# ============================================================
+# 6. NÚMERO DE OBSERVACIONES
+# ============================================================
+
+n = len(datos)
+
+
+print("\n" + "=" * 60)
+print("INFORMACIÓN GENERAL")
+print("=" * 60)
+
+print(f"Número de observaciones: {n}")
+
+
+# ============================================================
+# 7. REGLA DE STURGES PARA CADA VARIABLE
+# ============================================================
+
+k_X = round(1 + np.log2(len(X)))
+k_Y = round(1 + np.log2(len(Y)))
+
+
+print("\n" + "=" * 60)
+print("REGLA DE STURGES")
+print("=" * 60)
+
+print(f"Distancia_pc:")
+print(f"  Número de clases = {k_X}")
+
+print(f"\nMagnitud_V:")
+print(f"  Número de clases = {k_Y}")
+
+
+# ============================================================
+# 8. DATOS DE DISTANCIA
+# ============================================================
+
+xmin = X.min()
+xmax = X.max()
+
+R_X = xmax - xmin
+
+A_X = R_X / k_X
+
+
+# Crear intervalos
+intervalos_X = np.linspace(
+    xmin,
+    xmax,
+    k_X + 1
+)
+
+
+# Frecuencias
+frecuencias_X, bordes_X = np.histogram(
+    X,
+    bins=intervalos_X
+)
+
+
+# ============================================================
+# 9. DATOS DE MAGNITUD
+# ============================================================
+
+ymin = Y.min()
+ymax = Y.max()
+
+R_Y = ymax - ymin
+
+A_Y = R_Y / k_Y
+
+
+# Crear intervalos
+intervalos_Y = np.linspace(
+    ymin,
+    ymax,
+    k_Y + 1
+)
+
+
+# Frecuencias
+frecuencias_Y, bordes_Y = np.histogram(
+    Y,
+    bins=intervalos_Y
+)
+
+
+# ============================================================
+# 10. MOSTRAR INFORMACIÓN DE LOS INTERVALOS
+# ============================================================
+
+print("\n" + "=" * 60)
+print("HISTOGRAMA DE DISTANCIA")
+print("=" * 60)
+
+print(f"Mínimo: {xmin:.4f} pc")
+print(f"Máximo: {xmax:.4f} pc")
+print(f"Rango: {R_X:.4f} pc")
+print(f"Amplitud: {A_X:.4f} pc")
+
+print("\nFrecuencias:")
+print(frecuencias_X)
+
+
+print("\n" + "=" * 60)
+print("HISTOGRAMA DE MAGNITUD")
+print("=" * 60)
+
+print(f"Mínimo: {ymin:.4f}")
+print(f"Máximo: {ymax:.4f}")
+print(f"Rango: {R_Y:.4f}")
+print(f"Amplitud: {A_Y:.4f}")
+
+print("\nFrecuencias:")
+print(frecuencias_Y)
+
+
+# ============================================================
+# 11. CREAR LOS HISTOGRAMAS
+# ============================================================
+
+plt.figure(figsize=(12, 5))
+
+
+# ------------------------------------------------------------
+# Histograma de Distancia
+# ------------------------------------------------------------
+
+plt.subplot(1, 2, 1)
+
+plt.hist(
+    X,
+    bins=intervalos_X,
+    edgecolor="black"
+)
+
+plt.xlabel(
+    "Distancia (pc)"
+)
+
+plt.ylabel(
+    "Frecuencia"
+)
+
+plt.title(
+    "Histograma de Distancia"
+)
+
+plt.grid(
+    alpha=0.3
+)
+
+
+# ------------------------------------------------------------
+# Histograma de Magnitud
+# ------------------------------------------------------------
+
+plt.subplot(1, 2, 2)
+
+plt.hist(
+    Y,
+    bins=intervalos_Y,
+    edgecolor="black"
+)
+
+plt.xlabel(
+    "Magnitud aparente (V)"
+)
+
+plt.ylabel(
+    "Frecuencia"
+)
+
+plt.title(
+    "Histograma de Magnitud aparente"
+)
+
+plt.grid(
+    alpha=0.3
+)
+
+
+# ============================================================
+# 12. AJUSTAR Y MOSTRAR
+# ============================================================
+
+plt.tight_layout()
+
+plt.show()

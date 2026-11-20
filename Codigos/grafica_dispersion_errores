@@ -1,0 +1,332 @@
+
+# DIAGRAMA DE DISPERSION CON MEDIAS Y DESVIACIONES ESTANDAR
+#
+# Variables aleatorias:
+# X = Distancia_pc
+# Y = Magnitud_V
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+
+carpeta = Path(__file__).parent
+
+archivos_excel = list(carpeta.glob("*.xlsx"))
+
+if len(archivos_excel) == 0:
+
+    print("No se encontro ningun archivo Excel.")
+    print("Coloca el archivo .xlsx en:")
+    print(carpeta)
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+archivo = archivos_excel[0]
+
+df = pd.read_excel(archivo)
+
+print("=" * 65)
+print("ANALISIS ESTADISTICO DE DOS VARIABLES")
+print("=" * 65)
+
+print("\nArchivo seleccionado:")
+print(archivo.name)
+
+
+# ============================================================
+# 3. SELECCIONAR LAS VARIABLES ALEATORIAS
+# ============================================================
+
+X = pd.to_numeric(
+    df["Distancia_pc"],
+    errors="coerce"
+)
+
+Y = pd.to_numeric(
+    df["Magnitud_V"],
+    errors="coerce"
+)
+
+
+# ============================================================
+# 4. LIMPIEZA DE LOS DATOS
+# ============================================================
+
+datos = pd.DataFrame({
+    "Distancia_pc": X,
+    "Magnitud_V": Y
+})
+
+datos = datos.dropna()
+
+X = datos["Distancia_pc"].to_numpy()
+Y = datos["Magnitud_V"].to_numpy()
+
+n = len(X)
+
+if n < 2:
+    raise ValueError(
+        "Se necesitan al menos dos observaciones validas."
+    )
+
+
+# ============================================================
+# 5. CALCULO DE LAS MEDIAS
+#
+# Media aritmetica:
+#
+# mu = (1/n) * sumatoria(x_i)
+# ============================================================
+
+mu_x = np.sum(X) / n
+mu_y = np.sum(Y) / n
+
+
+# ============================================================
+# 6. CALCULO DE LAS VARIANZAS MUESTRALES
+#
+# s^2 = sumatoria[(x_i - mu)^2] / (n-1)
+# ============================================================
+
+var_x = np.sum((X - mu_x)**2) / (n - 1)
+
+var_y = np.sum((Y - mu_y)**2) / (n - 1)
+
+
+# ============================================================
+# 7. CALCULO DE LAS DESVIACIONES ESTANDAR
+#
+# s = raiz cuadrada de la varianza
+# ============================================================
+
+sigma_x = np.sqrt(var_x)
+
+sigma_y = np.sqrt(var_y)
+
+
+# ============================================================
+# 8. CALCULO DE LOS INTERVALOS DE UNA DESVIACION ESTANDAR
+# ============================================================
+
+x_menos = mu_x - sigma_x
+x_mas = mu_x + sigma_x
+
+y_menos = mu_y - sigma_y
+y_mas = mu_y + sigma_y
+
+
+# ============================================================
+# 9. CALCULO DE LA COVARIANZA
+#
+# Cov(X,Y) =
+# sumatoria[(x_i-mu_x)(y_i-mu_y)] / (n-1)
+# ============================================================
+
+cov_xy = np.sum(
+    (X - mu_x) * (Y - mu_y)
+) / (n - 1)
+
+
+# ============================================================
+# 10. CALCULO DEL COEFICIENTE DE CORRELACION
+#
+# r = Cov(X,Y) / (sigma_x * sigma_y)
+# ============================================================
+
+if sigma_x > 0 and sigma_y > 0:
+
+    r = cov_xy / (sigma_x * sigma_y)
+
+else:
+
+    r = np.nan
+
+
+# ============================================================
+# 11. MOSTRAR LOS RESULTADOS ESTADISTICOS
+# ============================================================
+
+print("\n" + "=" * 65)
+print("ESTADISTICOS DESCRIPTIVOS")
+print("=" * 65)
+
+print(f"\nNumero de observaciones: {n}")
+
+print("\nVARIABLE X: DISTANCIA")
+
+print(f"Media:                 {mu_x:.4f} pc")
+print(f"Varianza:              {var_x:.4f} pc^2")
+print(f"Desviacion estandar:   {sigma_x:.4f} pc")
+
+print(f"Limite inferior:       {x_menos:.4f} pc")
+print(f"Limite superior:       {x_mas:.4f} pc")
+
+
+print("\nVARIABLE Y: MAGNITUD APARENTE")
+
+print(f"Media:                 {mu_y:.4f}")
+print(f"Varianza:              {var_y:.4f}")
+print(f"Desviacion estandar:   {sigma_y:.4f}")
+
+print(f"Limite inferior:       {y_menos:.4f}")
+print(f"Limite superior:       {y_mas:.4f}")
+
+
+# ============================================================
+# 12. MOSTRAR COVARIANZA Y CORRELACION
+# ============================================================
+
+print("\n" + "=" * 65)
+print("ANALISIS DE DOS VARIABLES")
+print("=" * 65)
+
+print(f"\nCovarianza: {cov_xy:.6f}")
+
+print(f"Correlacion de Pearson: {r:.6f}")
+
+if np.isfinite(r):
+
+    if r > 0:
+        direccion = "Positiva"
+
+    elif r < 0:
+        direccion = "Negativa"
+
+    else:
+        direccion = "Nula"
+
+    if abs(r) < 0.3:
+        fuerza = "Debil"
+
+    elif abs(r) < 0.7:
+        fuerza = "Moderada"
+
+    else:
+        fuerza = "Fuerte"
+
+    print(f"Direccion: {direccion}")
+    print(f"Fuerza aproximada: {fuerza}")
+
+
+# ============================================================
+# 13. CONSTRUIR EL DIAGRAMA DE DISPERSION
+# ============================================================
+
+plt.figure(figsize=(12, 8))
+
+
+# ------------------------------------------------------------
+# OBSERVACIONES ORIGINALES
+# ------------------------------------------------------------
+
+plt.scatter(
+    X,
+    Y,
+    color="steelblue",
+    edgecolor="black",
+    alpha=0.80,
+    label="Observaciones"
+)
+
+
+# ============================================================
+# 14. REPRESENTAR LAS MEDIAS Y DESVIACIONES ESTANDAR
+# ============================================================
+
+plt.errorbar(
+    mu_x,
+    mu_y,
+    xerr=sigma_x,
+    yerr=sigma_y,
+    fmt="o",
+    color="red",
+    ecolor="black",
+    capsize=8,
+    markersize=10,
+    label="Media +/- desviacion estandar"
+)
+
+
+# ============================================================
+# 15. LINEAS DE REFERENCIA DE LAS MEDIAS
+# ============================================================
+
+plt.axvline(
+    mu_x,
+    color="darkorange",
+    linestyle="--",
+    linewidth=2,
+    label="Media de X"
+)
+
+plt.axhline(
+    mu_y,
+    color="green",
+    linestyle="--",
+    linewidth=2,
+    label="Media de Y"
+)
+
+
+# ============================================================
+# 16. ETIQUETAS Y TITULO
+# ============================================================
+
+plt.xlabel(
+    "Distancia (pc)",
+    fontsize=12
+)
+
+plt.ylabel(
+    "Magnitud aparente (V)",
+    fontsize=12
+)
+
+plt.title(
+    "Diagrama de dispersion con medias y desviaciones estandar",
+    fontsize=14
+)
+
+
+# ============================================================
+# 17. INFORMACION ESTADISTICA EN LA GRAFICA
+# ============================================================
+
+informacion = (
+    f"n = {n}\n"
+    f"Media X = {mu_x:.2f} pc\n"
+    f"Media Y = {mu_y:.3f}\n"
+    f"Desv. X = {sigma_x:.2f} pc\n"
+    f"Desv. Y = {sigma_y:.3f}\n"
+    f"Cov(X,Y) = {cov_xy:.3f}\n"
+    f"r = {r:.4f}"
+)
+
+plt.text(
+    0.03,
+    0.97,
+    informacion,
+    transform=plt.gca().transAxes,
+    verticalalignment="top",
+    bbox=dict(
+        boxstyle="round",
+        facecolor="white",
+        alpha=0.85
+    )
+)
+
+
+# ============================================================
+# 18. CONFIGURACION FINAL
+# ============================================================
+
+plt.grid(alpha=0.3)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.show()

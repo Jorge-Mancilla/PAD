@@ -1,0 +1,391 @@
+# REGRESION LINEAL Y PROPAGACION DEL ERROR
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from pathlib import Path
+from scipy.stats import linregress
+
+
+
+# 1. BUSCAR EL ARCHIVO DE EXCEL
+
+
+carpeta = Path(__file__).parent
+
+archivos_excel = list(carpeta.glob("*.xlsx"))
+
+if len(archivos_excel) == 0:
+
+    print("No se encontro ningun archivo Excel.")
+    print("Coloca el archivo .xlsx en:")
+    print(carpeta)
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+archivo = archivos_excel[0]
+
+print("=" * 70)
+print("ARCHIVO SELECCIONADO")
+print("=" * 70)
+
+print(archivo)
+
+
+
+# 2. LEER LA BASE DE DATOS
+
+
+df = pd.read_excel(archivo)
+
+
+
+# 3. EXTRAER LAS VARIABLES
+
+
+X = pd.to_numeric(
+    df["Distancia_pc"],
+    errors="coerce"
+)
+
+Y = pd.to_numeric(
+    df["Magnitud_V"],
+    errors="coerce"
+)
+
+
+
+# 4. ELIMINAR DATOS FALTANTES
+
+
+datos = pd.DataFrame({
+    "Distancia_pc": X,
+    "Magnitud_V": Y
+})
+
+datos = datos.replace(
+    [np.inf, -np.inf],
+    np.nan
+)
+
+datos = datos.dropna()
+
+X = datos["Distancia_pc"].to_numpy()
+Y = datos["Magnitud_V"].to_numpy()
+
+n = len(X)
+
+if n < 3 or np.all(X == X[0]):
+
+    print("No hay suficientes datos para realizar la regresion.")
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+
+
+# 5. REGRESION LINEAL
+
+
+resultado = linregress(X, Y)
+
+m = resultado.slope
+b = resultado.intercept
+
+sigma_m = resultado.stderr
+sigma_b = resultado.intercept_stderr
+
+r = resultado.rvalue
+R2 = r**2
+
+
+
+# 6. CALCULAR LA COVARIANZA ENTRE m Y b
+
+media_X = np.mean(X)
+
+cov_mb = -media_X * sigma_m**2
+
+
+
+# 7. CALCULAR EL ERROR RESIDUAL DE LA REGRESION
+
+
+Y_estimado = m * X + b
+
+residuos = Y - Y_estimado
+
+sigma_residual = np.sqrt(
+    np.sum(residuos**2) / (n - 2)
+)
+
+
+
+# 8. MOSTRAR LOS PARAMETROS DE LA RECTA
+
+
+print("\n" + "=" * 70)
+print("PARAMETRIZACION DE LA RECTA")
+print("=" * 70)
+
+print(f"Numero de observaciones: {n}")
+
+print(f"\nPendiente:")
+print(f"m = {m:.8f}")
+
+print(f"\nError de la pendiente:")
+print(f"sigma_m = {sigma_m:.8f}")
+
+print(f"\nOrdenada al origen:")
+print(f"b = {b:.8f}")
+
+print(f"\nError de la ordenada:")
+print(f"sigma_b = {sigma_b:.8f}")
+
+print("\nEcuacion de la recta:")
+
+print(f"y = ({m:.8f})x + ({b:.8f})")
+
+print("\nCovarianza entre los parametros:")
+print(f"Cov(m,b) = {cov_mb:.8f}")
+
+print("\nError residual:")
+print(f"s = {sigma_residual:.8f}")
+
+print("\nCorrelacion de Pearson:")
+print(f"r = {r:.6f}")
+
+print("\nCoeficiente de determinacion:")
+print(f"R2 = {R2:.6f}")
+print(f"R2 (%) = {R2*100:.4f}%")
+
+
+
+# 9. SOLICITAR UN VALOR ARBITRARIO DE X
+
+
+print("\n" + "=" * 70)
+print("PROPAGACION DEL ERROR")
+print("=" * 70)
+
+print("\nIntroduce un valor de distancia x")
+print("para calcular la magnitud correspondiente.")
+
+try:
+
+    x0 = float(input("\nx = "))
+
+    if not np.isfinite(x0):
+        raise ValueError
+
+except ValueError:
+
+    print("Valor no valido.")
+
+    input("\nPresiona ENTER para cerrar...")
+    exit()
+
+
+
+# 10. CALCULAR EL VALOR ESTIMADO
+
+
+y0 = m * x0 + b
+
+
+
+# 11. PROPAGACION DEL ERROR
+#
+# sigma_y^2 =
+# x0^2 sigma_m^2 + sigma_b^2
+# + 2*x0*Cov(m,b)
+
+
+varianza_y = (
+    (x0**2 * sigma_m**2)
+    + sigma_b**2
+    + (2 * x0 * cov_mb)
+)
+
+sigma_y = np.sqrt(max(varianza_y, 0))
+
+
+
+# 12. INCERTIDUMBRE DE PREDICCION DE UNA OBSERVACION
+
+
+sigma_prediccion = np.sqrt(
+    sigma_y**2 + sigma_residual**2
+)
+
+
+
+# 13. MOSTRAR RESULTADOS
+
+
+print("\n" + "=" * 70)
+print("RESULTADOS DE LA PROPAGACION")
+print("=" * 70)
+
+print(f"\nDistancia elegida:")
+print(f"x = {x0:.4f} pc")
+
+print(f"\nMagnitud estimada:")
+print(f"y = {y0:.6f}")
+
+print(f"\nIncertidumbre de la recta:")
+print(f"sigma_y = {sigma_y:.6f}")
+
+print("\nResultado final:")
+
+print(
+    f"y = ({y0:.6f} +/- {sigma_y:.6f})"
+)
+
+print("\nIncertidumbre de una observacion individual:")
+
+print(
+    f"sigma_prediccion = {sigma_prediccion:.6f}"
+)
+
+
+
+# 14. COMPROBAR SI EXISTE EXTRAPOLACION
+
+
+if x0 < X.min() or x0 > X.max():
+
+    print("\nADVERTENCIA:")
+    print("El valor elegido esta fuera del intervalo")
+    print("de distancias observadas.")
+    print("Se esta realizando una extrapolacion.")
+
+else:
+
+    print("\nEl valor elegido esta dentro del intervalo")
+    print("de distancias observadas.")
+
+
+
+# 15. GENERAR LA RECTA DE REGRESION
+
+
+x_recta = np.linspace(
+    X.min(),
+    X.max(),
+    500
+)
+
+y_recta = m * x_recta + b
+
+
+
+# 16. CREAR LA GRAFICA
+
+
+plt.figure(figsize=(12, 7))
+
+
+
+# DATOS EXPERIMENTALES
+
+
+plt.scatter(
+    X,
+    Y,
+    label="Observaciones",
+    alpha=0.8
+)
+
+
+
+# RECTA DE REGRESION
+
+
+plt.plot(
+    x_recta,
+    y_recta,
+    linewidth=2,
+    label="Regresion lineal"
+)
+
+
+
+# PUNTO CALCULADO Y SU INCERTIDUMBRE
+
+
+plt.errorbar(
+    x0,
+    y0,
+    yerr=sigma_y,
+    fmt="o",
+    capsize=7,
+    markersize=9,
+    color="red",
+    label="Estimacion +/- incertidumbre"
+)
+
+
+
+# 17. MOSTRAR LA ECUACION Y LOS PARAMETROS
+
+
+ecuacion = (
+    f"y = ({m:.6f})x + ({b:.6f})\n"
+    f"r = {r:.4f}\n"
+    f"R2 = {R2:.4f}\n"
+    f"sigma_y = {sigma_y:.5f}"
+)
+
+plt.text(
+    0.05,
+    0.95,
+    ecuacion,
+    transform=plt.gca().transAxes,
+    verticalalignment="top",
+    bbox=dict(
+        boxstyle="round",
+        facecolor="white",
+        alpha=0.85
+    )
+)
+
+
+
+# 18. ETIQUETAS
+
+
+plt.xlabel(
+    "Distancia (pc)",
+    fontsize=12
+)
+
+plt.ylabel(
+    "Magnitud aparente (V)",
+    fontsize=12
+)
+
+plt.title(
+    "Regresion lineal y propagacion del error",
+    fontsize=14
+)
+
+
+# ============================================================
+# 19. CUADRICULA Y LEYENDA
+# ============================================================
+
+plt.grid(alpha=0.3)
+
+plt.legend()
+
+plt.tight_layout()
+
+
+# ============================================================
+# 20. MOSTRAR GRAFICA
+# ============================================================
+
+plt.show()
